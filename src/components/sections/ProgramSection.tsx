@@ -1,73 +1,26 @@
 import { useState } from "react"
 import {
-  AnimatePresence,
   motion,
   useReducedMotion,
 } from "framer-motion"
 
 import { program } from "../../data/program"
 
-type ProgramRow = (typeof program)[number]
+const preparedProgram = (() => {
+  let currentBlockIndex: number | null = null
 
-interface ProgramGroup {
-  block: Extract<ProgramRow, { type: "block" }>
-  rows: ProgramRow[]
-  index: number
-}
-
-type ProgramItem =
-  | {
-      type: "group"
-      group: ProgramGroup
-    }
-  | {
-      type: "activity"
-      row: Extract<ProgramRow, { type: "activity" }>
-      index: number
-    }
-
-function createProgramItems(): ProgramItem[] {
-  const items: ProgramItem[] = []
-
-  let currentGroup: ProgramGroup | null = null
-
-  program.forEach((row, index) => {
+  return program.map((row, index) => {
     if (row.type === "block") {
-      currentGroup = {
-        block: row,
-        rows: [],
-        index,
-      }
-
-      items.push({
-        type: "group",
-        group: currentGroup,
-      })
-
-      return
+      currentBlockIndex = index
     }
 
-    if (row.type === "activity") {
-      currentGroup = null
-
-      items.push({
-        type: "activity",
-        row,
-        index,
-      })
-
-      return
-    }
-
-    if (currentGroup) {
-      currentGroup.rows.push(row)
+    return {
+      row,
+      index,
+      blockIndex: currentBlockIndex,
     }
   })
-
-  return items
-}
-
-const programItems = createProgramItems()
+})()
 
 export function ProgramSection() {
   const shouldReduceMotion = useReducedMotion()
@@ -137,63 +90,207 @@ export function ProgramSection() {
             </div>
           </div>
 
-          <div className="mt-5 space-y-7">
-            {programItems.map((item) => {
-              if (item.type === "activity") {
+          <div className="mt-5 space-y-5">
+            {preparedProgram.map(
+              ({ row, index, blockIndex }) => {
+                /*
+                 * BLOQUE
+                 */
+                if (row.type === "block") {
+                  const isOpen = openBlocks.has(index)
+
+                  return (
+                    <button
+                      key={`${row.title}-${index}`}
+                      type="button"
+                      onClick={() => toggleBlock(index)}
+                      aria-expanded={isOpen}
+                      className="
+                        w-full
+                        bg-onco-accent
+                        px-4
+                        py-3
+                        text-left
+                        text-2xl
+                        text-white
+                        transition
+                        duration-200
+                        hover:brightness-95
+                        focus-visible:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-onco-dark
+                      "
+                    >
+                      <div className="flex items-center justify-between gap-6">
+                        <div>
+                          <p className="font-bold">
+                            {row.title}
+                          </p>
+
+                          <p className="mt-1 text-sm lg:text-2xl">
+                            {row.moderators}
+                          </p>
+                        </div>
+
+                        <motion.span
+                          aria-hidden="true"
+                          animate={{
+                            rotate: isOpen ? 180 : 0,
+                          }}
+                          transition={{
+                            duration: shouldReduceMotion
+                              ? 0
+                              : 0.25,
+                          }}
+                          className="
+                            flex
+                            h-10
+                            w-10
+                            shrink-0
+                            items-center
+                            justify-center
+                            text-2xl
+                          "
+                        >
+                          ▼
+                        </motion.span>
+                      </div>
+                    </button>
+                  )
+                }
+
+                /*
+                 * ACTIVIDAD
+                 *
+                 * Inscripciones, Break, Almuerzo y Cena
+                 * siempre quedan visibles.
+                 */
+                if (row.type === "activity") {
+                  return (
+                    <div
+                      key={`${row.time}-${index}`}
+                      className="
+                        grid
+                        grid-cols-[200px_1fr]
+                        bg-onco-gray
+                        px-4
+                        py-3
+                        text-2xl
+                        text-white
+                        
+                      "
+                    >
+                      <span>
+                        {row.time}
+                      </span>
+
+                      <strong>
+                        {row.title}
+                      </strong>
+                    </div>
+                  )
+                }
+
+                /*
+                 * CHARLA
+                 *
+                 * Solo aparece si el último bloque
+                 * anterior está abierto.
+                 */
+                if (
+                  blockIndex === null ||
+                  !openBlocks.has(blockIndex)
+                ) {
+                  return null
+                }
+
                 return (
-                  <div
-                    key={`${item.row.time}-${item.index}`}
+                  <motion.div
+                    key={`${row.time}-${index}`}
+                    initial={
+                      shouldReduceMotion
+                        ? false
+                        : {
+                            opacity: 0,
+                            y: -8,
+                          }
+                    }
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      duration: shouldReduceMotion
+                        ? 0
+                        : 0.22,
+                    }}
                     className="
                       grid
-                      grid-cols-[200px_1fr]
-                      bg-onco-gray
+                      grid-cols-[200px_290px_1fr]
+                      bg-onco-surface
                       px-4
-                      py-3
+                      py-4
                       text-2xl
-                      text-white
+                      text-onco-text
                     "
                   >
-                    <span>{item.row.time}</span>
+                    <div className="pr-4">
+                      {row.time}
+                    </div>
 
-                    <strong>{item.row.title}</strong>
-                  </div>
+                    <div className="pr-6">
+                      {row.area}
+                    </div>
+
+                    <div>
+                      {row.content}
+                    </div>
+                  </motion.div>
                 )
               }
+            )}
+          </div>
+        </div>
 
-              const { group } = item
-              const isOpen = openBlocks.has(group.index)
+        {/* MOBILE */}
+        <div className="space-y-6 md:hidden">
+          {preparedProgram.map(
+            ({ row, index, blockIndex }) => {
+              /*
+               * BLOQUE
+               */
+              if (row.type === "block") {
+                const isOpen = openBlocks.has(index)
 
-              return (
-                <div key={`${group.block.title}-${group.index}`}>
+                return (
                   <button
+                    key={`${row.title}-${index}`}
                     type="button"
-                    onClick={() => toggleBlock(group.index)}
+                    onClick={() => toggleBlock(index)}
                     aria-expanded={isOpen}
-                    aria-controls={`program-block-${group.index}`}
                     className="
                       w-full
+                      rounded-sm
                       bg-onco-accent
-                      px-4
-                      py-3
+                      px-5
+                      py-4
                       text-left
-                      text-2xl
                       text-white
                       transition
                       duration-200
-                      hover:brightness-95
                       focus-visible:outline-none
                       focus-visible:ring-2
                       focus-visible:ring-onco-dark
                     "
                   >
-                    <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="font-bold">
-                          {group.block.title}
+                          {row.title}
                         </p>
 
-                        <p className="mt-1 text-sm lg:text-2xl">
-                          {group.block.moderators}
+                        <p className="mt-2 text-sm leading-snug">
+                          {row.moderators}
                         </p>
                       </div>
 
@@ -203,257 +300,108 @@ export function ProgramSection() {
                           rotate: isOpen ? 180 : 0,
                         }}
                         transition={{
-                          duration: shouldReduceMotion ? 0 : 0.25,
+                          duration: shouldReduceMotion
+                            ? 0
+                            : 0.25,
                         }}
                         className="
                           flex
-                          h-10
-                          w-10
+                          h-9
+                          w-9
                           shrink-0
                           items-center
                           justify-center
-                          text-2xl
+                          text-xl
                         "
                       >
                         ▼
                       </motion.span>
                     </div>
                   </button>
+                )
+              }
 
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        id={`program-block-${group.index}`}
-                        initial={
-                          shouldReduceMotion
-                            ? false
-                            : {
-                                height: 0,
-                                opacity: 0,
-                              }
-                        }
-                        animate={{
-                          height: "auto",
-                          opacity: 1,
-                        }}
-                        exit={
-                          shouldReduceMotion
-                            ? undefined
-                            : {
-                                height: 0,
-                                opacity: 0,
-                              }
-                        }
-                        transition={{
-                          duration: shouldReduceMotion ? 0 : 0.3,
-                          ease: "easeInOut",
-                        }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-2 pt-2">
-                          {group.rows.map((row, rowIndex) => {
-                            if (
-                              row.type === "block" ||
-                              row.type === "activity"
-                            ) {
-                              return null
-                            }
+              /*
+               * ACTIVIDAD
+               */
+              if (row.type === "activity") {
+                return (
+                  <div
+                    key={`${row.time}-${index}`}
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      gap-4
+                      bg-onco-gray
+                      px-5
+                      py-4
+                      text-white
+                    "
+                  >
+                    <span className="font-medium">
+                      {row.time}
+                    </span>
 
-                            return (
-                              <div
-                                key={`${row.time}-${rowIndex}`}
-                                className="
-                                  grid
-                                  grid-cols-[200px_290px_1fr]
-                                  bg-onco-surface
-                                  px-4
-                                  py-4
-                                  text-2xl
-                                  text-onco-text
-                                "
-                              >
-                                <div className="pr-4">
-                                  {row.time}
-                                </div>
+                    <strong className="text-right">
+                      {row.title}
+                    </strong>
+                  </div>
+                )
+              }
 
-                                <div className="pr-6">
-                                  {row.area}
-                                </div>
+              /*
+               * CHARLA
+               */
+              if (
+                blockIndex === null ||
+                !openBlocks.has(blockIndex)
+              ) {
+                return null
+              }
 
-                                <div>
-                                  {row.content}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* MOBILE */}
-        <div className="space-y-4 md:hidden">
-          {programItems.map((item) => {
-            if (item.type === "activity") {
               return (
-                <div
-                  key={`${item.row.time}-${item.index}`}
+                <motion.article
+                  key={`${row.time}-${index}`}
+                  initial={
+                    shouldReduceMotion
+                      ? false
+                      : {
+                          opacity: 0,
+                          y: -8,
+                        }
+                  }
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  transition={{
+                    duration: shouldReduceMotion
+                      ? 0
+                      : 0.22,
+                  }}
                   className="
-                    flex
-                    items-center
-                    justify-between
-                    gap-4
-                    bg-onco-gray
-                    px-5
-                    py-4
-                    text-white
+                    border
+                    border-black/5
+                    bg-onco-surface
+                    p-5
                   "
                 >
-                  <span className="font-medium">
-                    {item.row.time}
-                  </span>
+                  <p className="font-bold text-onco-primary">
+                    {row.time}
+                  </p>
 
-                  <strong>
-                    {item.row.title}
-                  </strong>
-                </div>
+                  <p className="mt-2 font-medium text-onco-text">
+                    {row.area}
+                  </p>
+
+                  <p className="mt-3 text-sm leading-relaxed text-onco-text">
+                    {row.content}
+                  </p>
+                </motion.article>
               )
             }
-
-            const { group } = item
-            const isOpen = openBlocks.has(group.index)
-
-            return (
-              <div key={`${group.block.title}-${group.index}`}>
-                <button
-                  type="button"
-                  onClick={() => toggleBlock(group.index)}
-                  aria-expanded={isOpen}
-                  aria-controls={`program-mobile-block-${group.index}`}
-                  className="
-                    w-full
-                    rounded-sm
-                    bg-onco-accent
-                    px-5
-                    py-4
-                    text-left
-                    text-white
-                    transition
-                    duration-200
-                    focus-visible:outline-none
-                    focus-visible:ring-2
-                    focus-visible:ring-onco-dark
-                  "
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-bold">
-                        {group.block.title}
-                      </p>
-
-                      <p className="mt-2 text-sm leading-snug">
-                        {group.block.moderators}
-                      </p>
-                    </div>
-
-                    <motion.span
-                      aria-hidden="true"
-                      animate={{
-                        rotate: isOpen ? 180 : 0,
-                      }}
-                      transition={{
-                        duration: shouldReduceMotion ? 0 : 0.25,
-                      }}
-                      className="
-                        flex
-                        h-9
-                        w-9
-                        shrink-0
-                        items-center
-                        justify-center
-                        text-xl
-                      "
-                    >
-                      ▼
-                    </motion.span>
-                  </div>
-                </button>
-
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      id={`program-mobile-block-${group.index}`}
-                      initial={
-                        shouldReduceMotion
-                          ? false
-                          : {
-                              height: 0,
-                              opacity: 0,
-                            }
-                      }
-                      animate={{
-                        height: "auto",
-                        opacity: 1,
-                      }}
-                      exit={
-                        shouldReduceMotion
-                          ? undefined
-                          : {
-                              height: 0,
-                              opacity: 0,
-                            }
-                      }
-                      transition={{
-                        duration: shouldReduceMotion ? 0 : 0.3,
-                        ease: "easeInOut",
-                      }}
-                      className="overflow-hidden"
-                    >
-                      <div className="space-y-3 pt-3">
-                        {group.rows.map((row, rowIndex) => {
-                          if (
-                            row.type === "block" ||
-                            row.type === "activity"
-                          ) {
-                            return null
-                          }
-
-                          return (
-                            <article
-                              key={`${row.time}-${rowIndex}`}
-                              className="
-                                border
-                                border-black/5
-                                bg-onco-surface
-                                p-5
-                              "
-                            >
-                              <p className="font-bold text-onco-primary">
-                                {row.time}
-                              </p>
-
-                              <p className="mt-2 font-medium text-onco-text">
-                                {row.area}
-                              </p>
-
-                              <p className="mt-3 text-sm leading-relaxed text-onco-text">
-                                {row.content}
-                              </p>
-                            </article>
-                          )
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )
-          })}
+          )}
         </div>
       </div>
     </section>
