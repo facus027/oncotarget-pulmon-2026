@@ -81,12 +81,14 @@ export function SponsorsSection() {
           </p>
 
           <div className="flex justify-center">
-            <img
+            <a href="https://www.fomza.org.ar/" target="_blank">
+              <img
               src="/assets/logos/fundacion-oncologica-mendoza.png"
               alt="Fundación Oncológica Mendoza"
               className="w-[220px] object-contain lg:w-[340px]"
               loading="lazy"
             />
+            </a>
           </div>
 
           <p className="text-center text-xl font-bold leading-tight text-black lg:text-2xl">
