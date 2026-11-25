@@ -147,7 +147,7 @@ export function Header() {
         </nav>
 
         <a
-          href="#preinscripcion"
+          href="#resumen-2026"
           className="
             hidden
             shrink-0
@@ -181,7 +181,7 @@ export function Header() {
             2xl:text-[26px]
           "
         >
-          PREINSCRIBITE
+          REVIVÍ LA EDICIÓN 2026
         </a>
 
         <button
@@ -308,9 +308,9 @@ export function Header() {
 ))}
 
               <a
-  href="#preinscripcion"
+  href="#resumen-2026"
   onClick={(event) =>
-    handleMobileNavigation(event, "#preinscripcion")
+    handleMobileNavigation(event, "#resumen-2026")
   }
   className="
     mt-5
@@ -323,7 +323,7 @@ export function Header() {
     text-white
   "
 >
-  PREINSCRIBITE
+  REVIVÍ LA EDICIÓN 2026
 </a>
             </nav>
           </motion.div>
